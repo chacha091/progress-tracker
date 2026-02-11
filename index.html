@@ -67,7 +67,6 @@ body {
 .grid {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8px, 1fr));
   gap: 6px;
   width: 100%;
   max-width: 420px;
@@ -79,7 +78,6 @@ body {
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: var(--dot);
-  transition: background 0.3s ease;
 }
 
 .filled {
@@ -132,12 +130,60 @@ body.danger {
   --bg: rgb(213, 84, 84);
 }
 
+/* today pulse */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.today {
+  animation: pulse 1.2s infinite;
+}
+
+/* complete wave */
+@keyframes waveFill {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.dot.complete {
+  animation: waveFill 0.4s ease forwards;
+}
+
+/* danger shake */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+body.danger .dday {
+  animation: shake 0.4s infinite;
+}
+
+/* progress bar */
+.progress-container {
+  width: 100%;
+  max-width: 420px;
+  height: 6px;
+  background: var(--dot);
+  margin-top: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--filled);
+  width: 0%;
+  transition: width 0.8s ease;
+}
 
 </style>
 </head>
 
 <body>
-
 <div class="header">
   <div class="project">SKALA</div>
   <button id="themeToggle" class="theme-btn">🌙</button>
@@ -148,8 +194,10 @@ body.danger {
 <div class="grid" id="grid"></div>
 
 <div class="percent" id="percent"></div>
+<div class="progress-container">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
 <div id="tooltip" class="tooltip"></div>
-
 
 <script>
 function normalize(date) {
@@ -160,7 +208,7 @@ const start = normalize(new Date("2026-01-06"));
 const end = normalize(new Date("2026-06-23"));
 const today = normalize(new Date());
 
-const totalDays = Math.ceil((end - start) / (1000*60*60*24));
+const totalDays = Math.floor((end - start) / (1000*60*60*24)) + 1;
 const passedDays = Math.max(0, Math.floor((today - start) / (1000*60*60*24)));
 const remainingDays = Math.ceil((end - today) / (1000*60*60*24));
 const percent = Math.min((passedDays / totalDays) * 100, 100);
@@ -181,6 +229,10 @@ if (remainingDays > 0) {
 // 퍼센트 표시
 percentEl.innerText = `${percent.toFixed(1)}% Completed`;
 
+const progressBar = document.getElementById("progressBar");
+progressBar.style.width = percent + "%";
+
+
 // 7일 이하 긴장 모드
 if (remainingDays <= 7 && remainingDays > 0) {
   document.body.classList.add("danger");
@@ -193,6 +245,13 @@ function formatDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+  // 🔹 정사각형에 가깝게 열/행 계산
+const columns = Math.round(Math.sqrt(totalDays));
+const rows = Math.ceil(totalDays / columns);
+
+// grid 스타일 동적 적용
+grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
 // 도트 생성
 const tooltip = document.getElementById("tooltip");
@@ -210,9 +269,9 @@ for (let i = 0; i < totalDays; i++) {
     dot.classList.add("filled");
   }
 
-  if (i === passedDays && remainingDays >= 0) {
-    dot.classList.add("today");
-  }
+  if (today >= start && today <= end && i === passedDays) {
+  dot.classList.add("today");
+}
 
   // 🔹 마우스 이벤트 추가
   dot.addEventListener("mouseenter", (e) => {
@@ -233,6 +292,16 @@ for (let i = 0; i < totalDays; i++) {
   });
 
   grid.appendChild(dot);
+}
+
+if (remainingDays < 0) {
+  const dots = document.querySelectorAll(".dot");
+  dots.forEach((dot, index) => {
+    setTimeout(() => {
+      dot.classList.add("complete");
+      dot.classList.add("filled");
+    }, index * 15);
+  });
 }
 
 const toggleBtn = document.getElementById("themeToggle");
@@ -263,3 +332,4 @@ toggleBtn.addEventListener("click", () => {
 
 </body>
 </html>
+
